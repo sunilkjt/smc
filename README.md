@@ -127,7 +127,7 @@ No extra setup beyond the `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` secrets.
 
 - Live discovery of verified stock markets (dynamic, HIP-3 aware, UNKNOWN-excluded)
 - Deterministic SMC engine: swings, BOS/CHoCH, liquidity sweeps, FVG, order
-  blocks, multi-timeframe setups with entry/SL/TP and 1:2 minimum RR
+  blocks, multi-timeframe setups with entry/SL/TP and 1:1.5 minimum RR (configurable)
 - Signal lifecycle (WAITING_FOR_RETEST → ACTIVE → RESOLVED/INVALIDATED/EXPIRED)
   with stable ids and dedupe, persisted locally
 - Paper trading: risk-based sizing (no leverage), fees + slippage, stop-first

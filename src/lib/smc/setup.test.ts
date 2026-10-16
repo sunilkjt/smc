@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateSetup } from './setup.ts';
 import type { Candle, CandleInterval, EngineConfig } from '../types.ts';
+import { DEFAULT_ENGINE_CONFIG } from '../types.ts';
 import { mkCandles } from './smc-core.test.ts';
 
 const CFG: EngineConfig = {
@@ -116,6 +117,10 @@ function invert(bars: Candle[]): Candle[] {
 }
 
 describe('generateSetup (long)', () => {
+  it('defaults to a 1:1.5 minimum risk/reward (quality bar, user-tunable)', () => {
+    expect(DEFAULT_ENGINE_CONFIG.minRiskReward).toBe(1.5);
+  });
+
   it('builds a full setup with structural SL and RR-gated targets', () => {
     const setup = longSetupBars();
     const context = bullishContext();

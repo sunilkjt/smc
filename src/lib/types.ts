@@ -379,7 +379,7 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   fvgLookback: 30,
   structureLookback: 60,
   signalExpiryBars: 48,
-  minRiskReward: 2,
+  minRiskReward: 1.5,
   atrPeriod: 14,
   atrStopBuffer: 0.25,
   minTargetAtrMultiple: 0.5,

@@ -32,7 +32,7 @@ const SETTINGS_KEY = 'hlsmc.settings.v1';
 
 const DEFAULT_SETTINGS: ScannerSettings = {
   topN: 8,
-  minRiskReward: 2,
+  minRiskReward: 1.5,
   riskPct: 1,
   startingBalance: 10_000,
   techEnabled: false,
