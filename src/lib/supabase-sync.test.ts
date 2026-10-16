@@ -150,6 +150,15 @@ describe('sync IO (mocked fetch)', () => {
     await expect(loadSignals(CFG, fetchMock)).rejects.toThrow('HTTP 401');
   });
 
+  it('treats empty 201 write responses as success (PostgREST default)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(new Response('', { status: 201 })));
+    await upsertSignals(CFG, [signal()], fetchMock);
+    await upsertTrades(CFG, [], fetchMock); // empty input still skips
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('explains HTML responses as a wrong SUPABASE_URL (not a bare SyntaxError)', async () => {
     const fetchMock = vi
       .fn()

@@ -34,6 +34,11 @@ async function readJson<T>(res: Response, what: string): Promise<T> {
     throw new Error(`Supabase ${what} failed: HTTP ${res.status}`);
   }
   const text = await res.text();
+  if (text.trim() === '') {
+    throw new Error(
+      `Supabase ${what} returned an empty body with HTTP ${res.status} (expected JSON).`,
+    );
+  }
   try {
     return JSON.parse(text) as T;
   } catch {
@@ -47,6 +52,21 @@ async function readJson<T>(res: Response, what: string): Promise<T> {
         `Body starts: ${text.slice(0, 120)}`,
     );
   }
+}
+
+/**
+ * Fire-and-forget write: checks success, ignores the (usually empty) body.
+ * PostgREST answers writes with 201 + empty body unless representation is
+ * requested — parsing that as JSON was a real bug.
+ */
+async function checkWrite(res: Response, what: string): Promise<void> {
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `Supabase ${what} failed: HTTP ${res.status}${text ? ` — ${text.slice(0, 200)}` : ''}`,
+    );
+  }
+  await res.text().catch(() => '');
 }
 
 /**
@@ -340,7 +360,7 @@ export async function upsertSignals(
       headers: headers(cfg, { Prefer: 'resolution=merge-duplicates' }),
       body: JSON.stringify(chunk),
     });
-    await readJson<unknown>(res, 'upsert signals');
+    await checkWrite(res, 'upsert signals');
   }
 }
 
@@ -381,7 +401,7 @@ export async function upsertTrades(
       headers: headers(cfg, { Prefer: 'resolution=merge-duplicates' }),
       body: JSON.stringify(chunk),
     });
-    await readJson<unknown>(res, 'upsert trades');
+    await checkWrite(res, 'upsert trades');
   }
 }
 
@@ -407,7 +427,7 @@ export async function saveAccount(
     headers: headers(cfg, { Prefer: 'resolution=merge-duplicates' }),
     body: JSON.stringify(accountToRow(account)),
   });
-  await readJson<unknown>(res, 'save account');
+  await checkWrite(res, 'save account');
 }
 
 export interface ScanSummary {
@@ -436,7 +456,7 @@ export async function recordScan(
       error: summary.error,
     }),
   });
-  await readJson<unknown>(res, 'record scan');
+  await checkWrite(res, 'record scan');
 }
 
 /** Mark signals as alerted (dedupe across runs). Returns claimed count. */
@@ -452,7 +472,7 @@ export async function markAlerted(
     headers: headers(cfg),
     body: JSON.stringify({ alerted_at: new Date().toISOString() }),
   });
-  await readJson<unknown>(res, 'mark alerted');
+  await checkWrite(res, 'mark alerted');
 }
 
 /** Fresh, unalerted, tradable signals eligible for delivery. */
