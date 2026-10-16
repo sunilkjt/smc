@@ -24,6 +24,11 @@ describe('parseCommand', () => {
     expect(parseCommand('/nuke')).toEqual({ command: 'help', args: [] });
   });
 
+  it('answers bare help/start without a slash', () => {
+    expect(parseCommand('help')).toEqual({ command: 'help', args: [] });
+    expect(parseCommand('  Start ')).toEqual({ command: 'help', args: [] });
+  });
+
   it('gates ownership by exact chat id match', () => {
     expect(isOwner(1745489575, '1745489575')).toBe(true);
     expect(isOwner('1745489575', '1745489575')).toBe(true);

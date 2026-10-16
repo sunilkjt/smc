@@ -17,7 +17,13 @@ export interface ParsedCommand {
 export function parseCommand(text: unknown): ParsedCommand | null {
   if (typeof text !== 'string') return null;
   const trimmed = text.trim();
-  if (!trimmed.startsWith('/')) return null;
+  if (!trimmed.startsWith('/')) {
+    // Bare "help"/"start" (no slash) still gets an answer — everything else
+    // stays silent so group chatter never triggers replies.
+    const word = trimmed.toLowerCase();
+    if (word === 'help' || word === 'start') return { command: 'help', args: [] };
+    return null;
+  }
   const [head, ...args] = trimmed.slice(1).split(/\s+/);
   const name = (head ?? '').split('@')[0]?.toLowerCase() ?? '';
   if (name !== 'scan' && name !== 'status' && name !== 'positions' && name !== 'signals' && name !== 'help') {
