@@ -71,9 +71,9 @@ export default function Dashboard() {
             type="button"
             onClick={runScan}
             disabled={progress.running || status !== 'live'}
-            className="mt-1 rounded-md border border-edge px-2 py-0.5 text-xs text-mute hover:text-ink disabled:opacity-50"
+            className="mt-2 w-full rounded-lg bg-bull px-4 py-2.5 text-sm font-bold tracking-wide text-black shadow-[0_0_18px_rgba(34,192,122,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
-            {progress.running ? `Scanning ${progress.done}/${progress.total}…` : 'Run scan'}
+            {progress.running ? `● Scanning ${progress.done}/${progress.total}…` : '▶ RUN SCAN'}
           </button>
           {progress.error && <p className="mt-1 text-[11px] text-bear">{progress.error}</p>}
         </section>
