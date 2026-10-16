@@ -9,7 +9,7 @@ export default defineConfig({
   // differs from the default below.
   base:
     process.env.VITE_BASE_PATH ??
-    (process.env.GITHUB_PAGES === 'true' ? '/hyperliquid-smc-stocks/' : '/'),
+    (process.env.GITHUB_PAGES === 'true' ? '/smc/' : '/'),
   plugins: [react(), tailwindcss()],
   test: {
     environment: 'node',

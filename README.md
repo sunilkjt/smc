@@ -64,9 +64,9 @@ they are never converted into empty market lists or empty signals.
 1. Push to `main` on GitHub. The `pages.yml` workflow runs tests, builds with
    `GITHUB_PAGES=true`, and deploys `dist/`.
 2. In repo settings → Pages, select **GitHub Actions** as the source.
-3. If the repo name differs from `hyperliquid-smc-stocks`, set the
+3. If the repo name differs from `smc`, set the
    `VITE_BASE_PATH` repository variable/secret (e.g. `/my-repo/`) — the build
-   uses `VITE_BASE_PATH`, falling back to `/hyperliquid-smc-stocks/`.
+   uses `VITE_BASE_PATH`, falling back to `/smc/`.
 4. Hash-based routing is used, so deep links work with no server rewrites.
 
 The `scan.yml` workflow re-runs the discovery smoke test every 30 minutes as a
