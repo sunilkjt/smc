@@ -74,13 +74,16 @@ async function main(): Promise<void> {
   if (!(minRR > 0)) throw new Error(`Invalid MIN_RR=${process.env['MIN_RR']}`);
   const engine = { ...DEFAULT_ENGINE_CONFIG, minRiskReward: minRR };
   const persist = process.env['PERSIST'] === '1';
-  const sb = persist ? sbConfig() : null;
+  let sb = persist ? sbConfig() : null;
   if (persist && !sb) {
-    throw new Error('PERSIST=1 requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+    // Missing secrets must degrade to a stateless run, never fail the
+    // scheduled workflow: continuity starts once secrets are configured.
+    console.log('PERSIST=1 but SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing — running statelessly.');
   }
 
   console.log(`Discovery + scan of top ${topN} verified stocks (tech=${techEnabled ? 'on' : 'off'}, persist=${sb ? 'supabase' : 'none'})`);
-  const discovery = await discoverStockMarkets({ timeoutMs: 20000, maxRetries: 4 });
+  // Scheduled runners share egress IPs and hit 429s often: generous retries.
+  const discovery = await discoverStockMarkets({ timeoutMs: 25000, maxRetries: 6 });
   console.log(
     `dexes=${discovery.dexCount} assets=${discovery.totalAssets} stocks=${discovery.markets.length} excluded=${discovery.excludedCount}`,
   );

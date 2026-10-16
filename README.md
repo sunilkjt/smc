@@ -89,7 +89,9 @@ scans lives server-side:
 3. The next scheduled run persists with `PERSIST=1`: it loads prior signals +
    paper state, advances lifecycles over fresh candles, upserts everything
    back, records a `smc_scans` row, and dedupes Telegram alerts via
-   `alerted_at`. Without the secrets the same workflow still runs statelessly.
+   `alerted_at`. Without the secrets the same workflow still runs statelessly
+   (it logs the fact and exits successfully — a missing secret never fails
+   the scan).
 
 RLS posture: `anon` has no policies on these tables (publishable key alone can
 neither read nor write history). Only the service-role key syncs, and only
