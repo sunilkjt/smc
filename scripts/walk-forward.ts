@@ -81,10 +81,14 @@ async function main(): Promise<void> {
       );
       let marketR = 0;
       let marketTrades = 0;
+      const reasonCounts = new Map<string, number>();
       for (const outcome of outcomes) {
         const net = outcome.trades.reduce((a, t) => a + t.realizedR, 0);
         marketR += net;
         marketTrades += outcome.trades.length;
+        for (const reason of outcome.reasons) {
+          reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+        }
         lines.push(
           `| ${market.id} | ${new Date(outcome.cutoff).toISOString().slice(0, 10)} | ${outcome.setups} | ${outcome.filled} | ${outcome.trades.length} | ${net >= 0 ? '+' : ''}${net.toFixed(2)} |`,
         );
@@ -94,7 +98,8 @@ async function main(): Promise<void> {
       totalTrades += marketTrades;
       console.log(
         `${market.id}: ${marketTrades} closed / ${outcomes.reduce((a, o) => a + o.openLeft, 0)} left open, ` +
-        `win ${summary.winRate == null ? 'n/a' : `${(summary.winRate * 100).toFixed(0)}%`}, exp ${summary.expectancyR == null ? 'n/a' : `${summary.expectancyR.toFixed(2)}R`}`,
+        `win ${summary.winRate == null ? 'n/a' : `${(summary.winRate * 100).toFixed(0)}%`}, exp ${summary.expectancyR == null ? 'n/a' : `${summary.expectancyR.toFixed(2)}R`}, ` +
+        `rejections: ${[...reasonCounts.entries()].map(([r, n]) => `${r}×${n}`).join(', ') || 'none'}`,
       );
     } catch (err) {
       lines.push(`| ${market.id} | — | fetch failed: ${err instanceof Error ? err.message : String(err)} | | | |`);

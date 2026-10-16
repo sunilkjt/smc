@@ -54,6 +54,14 @@ describe('replayCutoff', () => {
     expect(a.setups).toBe(0);
   });
 
+  it('explains empty windows with first-failure reasons (flat tape → HTF context)', () => {
+    const flat: Candle[] = Array.from({ length: 300 }, (_, i) => bar(i * 900_000, 100));
+    const ctx: Candle[] = Array.from({ length: 150 }, (_, i) => bar(i * 3_600_000, 100));
+    const cutoff = flat[flat.length - 1]?.closeTime ?? 0;
+    const out = replayCutoff('x', flat, ctx, cutoff, DEFAULT_ENGINE_CONFIG, 9);
+    expect(out.reasons).toEqual(['NO_HTF_CONTEXT', 'NO_HTF_CONTEXT']);
+  });
+
   it('caps the forward window (bounded resolution horizon)', () => {
     expect(WF_FORWARD_BARS).toBe(500);
   });

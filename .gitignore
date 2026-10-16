@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 scan-results.json
+funnel-results.json
 sent-ids.json
 eval-report.md
 walkforward-report.md

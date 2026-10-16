@@ -11,6 +11,7 @@
     "test": "vitest run",
     "smoke:discovery": "tsx scripts/smoke-discovery.ts",
     "scan": "tsx scripts/signal-scan.ts",
+    "funnel": "tsx scripts/signal-funnel.ts",
     "alert": "tsx scripts/send-telegram.ts",
     "telegram": "tsx scripts/telegram-commands.ts",
     "verify:paper": "tsx scripts/verify-paper.ts",

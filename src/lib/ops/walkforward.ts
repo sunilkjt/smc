@@ -16,7 +16,7 @@
  *   except the caller-supplied scannedAt used for record-keeping).
  */
 import { createAccount, openFromSignal, resolvePositions } from '../paper/engine.ts';
-import { DEFAULT_ENGINE_CONFIG, type Candle, type ClosedTrade, type EngineConfig, type Signal } from '../types.ts';
+import { DEFAULT_ENGINE_CONFIG, type Candle, type ClosedTrade, type EngineConfig, type NoTradeReason, type Signal } from '../types.ts';
 import { ingestScan, scanDirections } from '../signals/engine.ts';
 import { advanceSignal } from '../signals/lifecycle.ts';
 
@@ -44,6 +44,8 @@ export interface CutoffOutcome {
   cutoff: number;
   /** Tradable (non-diagnostic) signals evaluated at this cutoff. */
   setups: number;
+  /** First-failure reasons of the diagnostic signals (explains empty windows). */
+  reasons: NoTradeReason[];
   /** Signals that filled within the forward window. */
   filled: number;
   /** Closed paper trades produced within the forward window. */
@@ -70,9 +72,12 @@ export function replayCutoff(
     .filter((c) => c.closeTime > cutoff)
     .slice(0, WF_FORWARD_BARS);
   if (evalSetup.length < config.structureLookback + 10 || evalContext.length < 30) {
-    return { cutoff, setups: 0, filled: 0, trades: [], openLeft: 0 };
+    return { cutoff, setups: 0, reasons: ['STALE_OR_MISSING_DATA'], filled: 0, trades: [], openLeft: 0 };
   }
   const fresh = scanDirections({ coin, context: evalContext, setup: evalSetup, config, dataNow: cutoff, scannedAt });
+  const reasons = fresh
+    .filter((s) => s.state === 'NO_TRADE' && s.noTradeReason != null)
+    .map((s) => s.noTradeReason as NoTradeReason);
   const signals = ingestScan([], fresh);
   let filled = 0;
   let account = createAccount();
@@ -96,6 +101,7 @@ export function replayCutoff(
   return {
     cutoff,
     setups: signals.filter((s) => s.setup != null).length,
+    reasons,
     filled,
     trades: [...account.closedTrades],
     openLeft: account.openPositions.length,
