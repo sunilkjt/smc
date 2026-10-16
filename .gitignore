@@ -13,6 +13,8 @@ dist-ssr
 *.local
 scan-results.json
 sent-ids.json
+eval-report.md
+walkforward-report.md
 
 # Editor directories and files
 .vscode/*

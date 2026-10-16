@@ -12,6 +12,12 @@ on:
 permissions:
   contents: read
 
+# Serialize runs (queue, never cancel): overlapping scans would load the same
+# paper account concurrently and interleave upserts. Queued runs each converge
+# on deterministic state; cancelled runs could leave partial persists.
+concurrency:
+  group: scheduled-scan
+
 jobs:
   scan:
     runs-on: ubuntu-latest

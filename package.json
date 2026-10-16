@@ -13,7 +13,10 @@
     "scan": "tsx scripts/signal-scan.ts",
     "alert": "tsx scripts/send-telegram.ts",
     "telegram": "tsx scripts/telegram-commands.ts",
-    "verify:paper": "tsx scripts/verify-paper.ts"
+    "verify:paper": "tsx scripts/verify-paper.ts",
+    "eval": "tsx scripts/eval-report.ts",
+    "walkforward": "tsx scripts/walk-forward.ts",
+    "watchdog": "tsx scripts/scan-watchdog.ts"
   },
   "dependencies": {
     "lightweight-charts": "^5.2.1",

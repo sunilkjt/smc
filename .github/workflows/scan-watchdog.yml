@@ -1,0 +1,25 @@
+name: Scan watchdog
+
+# Observability for the scheduler itself: classifies the scan workflow's
+# recent history into OK / STALLED / WORKFLOW_ERROR / CRON_GAP without
+# assuming cron timing. Needs no secrets (public runs API). A red run here
+# means "go look at the scan workflow", nothing more.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run watchdog

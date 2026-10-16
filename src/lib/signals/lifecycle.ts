@@ -66,6 +66,10 @@ export function advanceSignal(signal: Signal, window: ForwardWindow, config: Eng
     const bar = window.candles[k];
     if (!bar || bar.closeTime <= setup.signalTime) continue;
     if (state === 'WAITING_FOR_RETEST') {
+      // barsSince counts OBSERVED forward bars (not wall time): sparse
+      // after-hours series must not expire faster than liquid ones. Callers
+      // always pass the complete post-signal history (see applyScan), so a
+      // truncated window can never silently extend the deadline in practice.
       const barsSince = k + 1;
       const filled = touchedStrict(bar, setup.entry, dir);
       const ranAway = dir === 'long' ? bar.close > setup.takeProfit1 : bar.close < setup.takeProfit1;
