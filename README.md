@@ -26,6 +26,8 @@ cd C:\Users\sunil\Desktop\hyperliquid-smc-stocks
 & "C:\Program Files\nodejs\npm.cmd" run build    # typecheck + production build
 & "C:\Program Files\nodejs\npm.cmd" run lint     # oxlint
 & "C:\Program Files\nodejs\npm.cmd" run smoke:discovery  # live API smoke test
+& "C:\Program Files\nodejs\npm.cmd" run scan         # headless signal scan (TOP_N=8)
+$env:TOP_N="3"; & "C:\Program Files\nodejs\npm.cmd" run scan  # smaller scan
 ```
 
 > `npm.ps1` may be blocked by the execution policy; invoking `npm.cmd` directly
@@ -88,8 +90,23 @@ key only in the frontend.
 | Market missing from stock list | No `stocks` builder category → `UNKNOWN`, excluded by design. |
 | Blank page on Pages | Wrong base path — set `VITE_BASE_PATH` to `/<repo>/`. |
 
+## What works now
+
+- Live discovery of verified stock markets (dynamic, HIP-3 aware, UNKNOWN-excluded)
+- Deterministic SMC engine: swings, BOS/CHoCH, liquidity sweeps, FVG, order
+  blocks, multi-timeframe setups with entry/SL/TP and 1:2 minimum RR
+- Signal lifecycle (WAITING_FOR_RETEST → ACTIVE → RESOLVED/INVALIDATED/EXPIRED)
+  with stable ids and dedupe, persisted locally
+- Paper trading: risk-based sizing (no leverage), fees + slippage, stop-first
+  resolution, TP1 partials, R-multiples
+- Performance analytics (win rate, expectancy, profit factor, drawdown, splits
+  by strategy/market) with small-sample warnings
+- Technical Confluence comparison strategy (disabled by default)
+- Headless scan (`npm run scan`) + scheduled Actions workflow with artifact
+- Telegram alert formatter + dispatch script (needs server-side secrets)
+
 ## Roadmap
 
-- Phase 4: deterministic SMC engine (swings, BOS/CHoCH, sweeps, FVG, OBs, setups)
-- Phase 5: signal lifecycle + paper trading · Phase 6: analytics + Tech Confluence
-  (opt-in) · Phase 7: alerts, Supabase sync, scheduled scans · Phase 8: release
+- Supabase cloud sync (migration `supabase/migrations/0001_smc_stocks.sql` is
+  ready; client sync pending — app stays local-only until then)
+- Fine-tunable engine parameters per market, WebSocket live updates

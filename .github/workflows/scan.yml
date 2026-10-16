@@ -1,9 +1,9 @@
 name: Scheduled market scan
 
-# Server-side drift detector: re-runs live discovery on a schedule so API
-# changes or classification drift surface in Actions logs. The full scheduled
-# signal scan + optional Telegram alerts arrive in Phase 7; until then this
-# workflow runs the discovery smoke test only. No secrets are used.
+# Server-side signal scan: discovery smoke (API/classification drift
+# detector) + headless SMC scan of the top liquid stocks, published as a
+# workflow artifact. Optional Telegram delivery runs only when
+# TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID secrets are configured.
 on:
   schedule:
     - cron: '*/30 * * * *'
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,3 +23,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run smoke:discovery
+      - run: npm run scan
+        env:
+          TOP_N: '5'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scan-results
+          path: scan-results.json
+      - run: npm run alert
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

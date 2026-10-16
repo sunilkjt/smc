@@ -51,7 +51,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <footer className="mx-auto max-w-6xl px-4 pb-8 text-[11px] text-mute">
-        Data: Hyperliquid public API · Signals are deterministic (no AI) · SMC engine: Phase 4
+        Data: Hyperliquid public API · Deterministic signals (no AI) · Paper trading is simulated
       </footer>
     </div>
   );

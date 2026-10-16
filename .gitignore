@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+scan-results.json
+sent-ids.json
 
 # Editor directories and files
 .vscode/*
