@@ -12,6 +12,7 @@ import {
   signalToRow,
   upsertSignals,
   upsertTrades,
+  validateSbConfig,
   type SbConfig,
 } from './supabase-sync.ts';
 import type { PaperPosition, Signal } from './types.ts';
@@ -147,5 +148,27 @@ describe('sync IO (mocked fetch)', () => {
   it('surfaces HTTP failures as errors (never silent)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('denied', { status: 401 }));
     await expect(loadSignals(CFG, fetchMock)).rejects.toThrow('HTTP 401');
+  });
+
+  it('explains HTML responses as a wrong SUPABASE_URL (not a bare SyntaxError)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(new Response('<!DOCTYPE html><html>nope</html>', { status: 200 })),
+      );
+    await expect(loadSignals(CFG, fetchMock)).rejects.toThrow('not API JSON');
+  });
+
+  it('validateSbConfig rejects dashboard/endpoint URLs and accepts API bases', () => {
+    expect(() => validateSbConfig({ url: 'https://supabase.com/dashboard/project/abc', key: 'k' })).toThrow(
+      'dashboard or endpoint URL',
+    );
+    expect(() => validateSbConfig({ url: 'https://abc.supabase.co/rest/v1', key: 'k' })).toThrow(
+      'dashboard or endpoint URL',
+    );
+    expect(() => validateSbConfig({ url: 'not a url', key: 'k' })).toThrow('malformed');
+    expect(() =>
+      validateSbConfig({ url: 'https://abc.supabase.co', key: 'k' }),
+    ).not.toThrow();
   });
 });

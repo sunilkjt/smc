@@ -17,6 +17,7 @@ import { formatSignalAlert, shouldSendAlert } from '../src/lib/alerts/format.ts'
 import {
   loadAlertCandidates,
   markAlerted,
+  validateSbConfig,
   type SbConfig,
 } from '../src/lib/supabase-sync.ts';
 import type { Signal } from '../src/lib/types.ts';
@@ -46,6 +47,7 @@ async function main(): Promise<void> {
   const now = Date.now();
   let delivered = 0;
   if (sb) {
+    validateSbConfig(sb);
     // DB mode: cross-run dedupe via alerted_at.
     const candidates = await loadAlertCandidates(sb);
     for (const s of candidates) {

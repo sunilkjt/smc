@@ -18,7 +18,7 @@
  *
  * Usage: npm run verify:paper
  */
-import { loadTrades, type SbConfig } from '../src/lib/supabase-sync.ts';
+import { loadTrades, validateSbConfig, type SbConfig } from '../src/lib/supabase-sync.ts';
 import type { PaperPosition } from '../src/lib/types.ts';
 
 const R_TOL = 1e-6;
@@ -86,6 +86,7 @@ async function main(): Promise<void> {
     return;
   }
   const cfg: SbConfig = { url, key };
+  validateSbConfig(cfg);
   const { open, closed, skipped } = await loadTrades(cfg);
   console.log(`loaded ${open.length} open, ${closed.length} closed (skipped ${skipped} corrupt rows)`);
   const seen = new Set<string>();

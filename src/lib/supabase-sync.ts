@@ -33,7 +33,38 @@ async function readJson<T>(res: Response, what: string): Promise<T> {
   if (!res.ok) {
     throw new Error(`Supabase ${what} failed: HTTP ${res.status}`);
   }
-  return (await res.json()) as T;
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // HTML here almost always means a wrong SUPABASE_URL (dashboard URL,
+    // typo, or path suffix) — say so plainly instead of a bare SyntaxError.
+    // The snippet below is a server error page, never a secret.
+    throw new Error(
+      `Supabase ${what} returned a web page, not API JSON (HTTP ${res.status}). ` +
+        `Check SUPABASE_URL is exactly https://<project-ref>.supabase.co ` +
+        `(Settings → Data API → Project URL, no dashboard path). ` +
+        `Body starts: ${text.slice(0, 120)}`,
+    );
+  }
+}
+
+/**
+ * Fail fast on malformed Supabase URLs before any network call. Accepts any
+ * http(s) API base (including self-hosted) but rejects the common mistake of
+ * pasting a dashboard/console URL.
+ */
+export function validateSbConfig(cfg: SbConfig): void {
+  const url = cfg.url.trim();
+  if (!/^https?:\/\/.+\..+/.test(url)) {
+    throw new Error(`SUPABASE_URL is malformed: ${JSON.stringify(url)}`);
+  }
+  if (/supabase\.com\/dashboard|supabase\.com\/project|\/rest\/v1\/?$|\/auth\/v1\/?$/.test(url)) {
+    throw new Error(
+      'SUPABASE_URL looks like a dashboard or endpoint URL. Use exactly ' +
+        'https://<project-ref>.supabase.co from Settings → Data API → Project URL.',
+    );
+  }
 }
 
 function toIso(ms: number | null): string | null {

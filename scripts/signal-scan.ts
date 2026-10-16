@@ -36,6 +36,7 @@ import {
   saveAccount,
   upsertSignals,
   upsertTrades,
+  validateSbConfig,
   type SbConfig,
 } from '../src/lib/supabase-sync.ts';
 
@@ -92,6 +93,7 @@ async function main(): Promise<void> {
   let priorIds = new Set<string>();
   let paper: PaperAccount | null = null;
   if (sb) {
+    validateSbConfig(sb);
     const { signals, skipped } = await loadSignals(sb);
     priorIds = new Set(signals.map((s) => s.id));
     const trades = await loadTrades(sb);
