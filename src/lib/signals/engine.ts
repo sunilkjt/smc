@@ -62,8 +62,10 @@ export function scanDirections(inputs: ScanInputs): Signal[] {
         resolution: null,
       });
     } else {
+      // Stable diagnostic id WITHOUT the reason: re-scans refresh the same
+      // row instead of orphaning a new one per reason (bounded growth).
       out.push({
-        id: `smc:${inputs.coin}:${inputs.config.setupTimeframe}:${direction}:no-trade:${result.reason}`,
+        id: `smc:${inputs.coin}:${inputs.config.setupTimeframe}:${direction}:no-trade`,
         strategy: 'smc',
         coin: inputs.coin,
         setupTimeframe: inputs.config.setupTimeframe,

@@ -26,6 +26,16 @@ jobs:
       - run: npm run scan
         env:
           TOP_N: '5'
+          # Cross-run continuity: persists signals/paper state to Supabase so
+          # scheduled runs continue history instead of starting blank. When
+          # the secrets below are absent the scan still runs statelessly.
+          PERSIST: '1'
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - run: npm run verify:paper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: scan-results

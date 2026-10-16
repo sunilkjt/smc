@@ -44,6 +44,7 @@ export default function Dashboard() {
   const activePositions = paper.openPositions.length;
   const closedCount = paper.closedTrades.length;
   const totalR = paper.closedTrades.reduce((a, t) => a + t.realizedR, 0);
+  const top = tradable.length > 0 ? tradable[0] : null;
 
   return (
     <div className="space-y-4">
@@ -108,6 +109,32 @@ export default function Dashboard() {
             </button>
           </p>
         </div>
+      )}
+
+      {top?.setup && (
+        <section className="rounded-lg border border-bull/40 bg-panel p-4">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className={`text-base font-bold ${top.direction === 'long' ? 'text-bull' : 'text-bear'}`}>
+              {top.direction === 'long' ? 'BUY' : 'SELL'} {top.coin}
+            </span>
+            <span className="mono text-xs text-mute">
+              {top.setupTimeframe} · {top.state} · checks {top.setup.qualityPassed}/{top.setup.qualityTotal}
+            </span>
+            <Link
+              to={`/signal/${encodeURIComponent(top.coin)}`}
+              className="ml-auto text-xs text-mute underline hover:text-ink"
+            >
+              Open chart →
+            </Link>
+          </div>
+          <div className="mono mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            <span>Entry <strong>{fmtPx(top.setup.entry)}</strong></span>
+            <span className="text-bear">SL {fmtPx(top.setup.stopLoss)}</span>
+            <span className="text-bull">TP1 {fmtPx(top.setup.takeProfit1)} · TP2 {fmtPx(top.setup.takeProfit2)}</span>
+            <span className="text-mute">RR {top.setup.riskReward1.toFixed(2)}</span>
+          </div>
+          <p className="mt-1 text-xs text-mute">{top.setup.explanation}</p>
+        </section>
       )}
 
       <section className="rounded-lg border border-edge bg-panel p-4">

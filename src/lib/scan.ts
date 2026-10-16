@@ -24,7 +24,7 @@ import { DEFAULT_ENGINE_CONFIG } from './types.ts';
 import { ingestScan, scanDirections } from './signals/engine.ts';
 import { advanceSignal } from './signals/lifecycle.ts';
 import { openFromSignal, resolvePositions, createAccount } from './paper/engine.ts';
-import { evaluateTech, type TechEvaluation } from './tech/strategy.ts';
+import { evaluateTech, techSignalFromEvaluation, type TechEvaluation } from './tech/strategy.ts';
 
 export interface ScanMarketPlan {
   market: Market;
@@ -98,9 +98,25 @@ export function evaluateMarket(
       dataNow: scannedAt,
       scannedAt,
     });
-    const tech = opts.techEnabled
-      ? evaluateTech({ coin, candles: setup, htf: context })
-      : null;
+    let tech: TechEvaluation | null = null;
+    if (opts.techEnabled && setup.length > 0) {
+      tech = evaluateTech({ coin, candles: setup, htf: context });
+      const last = setup[setup.length - 1];
+      if (tech.direction !== 'none' && last) {
+        const techSignal = techSignalFromEvaluation(
+          coin,
+          tech,
+          opts.engine.setupTimeframe,
+          setup.length - 1,
+          last.closeTime,
+          last.closeTime,
+          scannedAt,
+        );
+        if (techSignal) signals.push(techSignal);
+      }
+      // A "no confluence" outcome is intentionally silent: the SMC
+      // diagnostics already cover the coin, and dashboards stay clean.
+    }
     return { coin, signals, tech, setupBars: setup.length, error: null };
   } catch (err) {
     return {

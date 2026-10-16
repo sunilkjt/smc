@@ -14,12 +14,15 @@
  * The engine gate (`enabled` flag, default false) lives in settings/UI —
  * this module only evaluates; it never enables itself.
  */
-import type { Candle, FullCoinId, SignalDirection } from '../types.ts';
+import type { Candle, FullCoinId, Signal, SignalDirection, SmcSetup } from '../types.ts';
+import { stableSignalId } from '../signals/ids.ts';
 import { atrSeries, emaSeries, macdSeries, relativeVolume, rsiSeries } from './indicators.ts';
 
 export interface TechEvaluation {
   direction: SignalDirection | 'none';
   reasons: string[];
+  /** Per-confluence votes (all must pass for a direction). */
+  votes: Array<{ name: string; passed: boolean; detail: string }>;
   snapshot: {
     ema20: number | null;
     ema50: number | null;
@@ -58,6 +61,7 @@ export function evaluateTech(inputs: TechInputs): TechEvaluation {
     return {
       direction: 'none',
       reasons: ['insufficient history (need 210 setup + 60 HTF bars)'],
+      votes: [],
       snapshot: {
         ema20: null, ema50: null, ema200: null, rsi14: null,
         macdHist: null, atr: null, relVol: null, htfTrendUp: null,
@@ -84,7 +88,7 @@ export function evaluateTech(inputs: TechInputs): TechEvaluation {
     ema20 != null && ema50 != null && ema200 != null && rsi14 != null &&
     macdHist != null && atr != null && atr > 0 && relVol != null && htfTrendUp != null;
   if (!complete) {
-    return { direction: 'none', reasons: ['indicators not yet valid'], snapshot, plan: null };
+    return { direction: 'none', reasons: ['indicators not yet valid'], votes: [], snapshot, plan: null };
   }
 
   const longVotes = [
@@ -109,6 +113,7 @@ export function evaluateTech(inputs: TechInputs): TechEvaluation {
     return {
       direction: 'long',
       reasons: ['6/6 long confluence'],
+      votes: toVotes('long', labels, longVotes, snapshot, close),
       snapshot,
       plan: {
         entry: close,
@@ -122,6 +127,7 @@ export function evaluateTech(inputs: TechInputs): TechEvaluation {
     return {
       direction: 'short',
       reasons: ['6/6 short confluence'],
+      votes: toVotes('short', labels, shortVotes, snapshot, close),
       snapshot,
       plan: {
         entry: close,
@@ -139,7 +145,96 @@ export function evaluateTech(inputs: TechInputs): TechEvaluation {
       `long missing: ${longMissed.join(', ') || '—'}`,
       `short missing: ${shortMissed.join(', ') || '—'}`,
     ],
+    votes: toVotes('long', labels, longVotes, snapshot, close),
     snapshot,
     plan: null,
+  };
+}
+
+function toVotes(  side: SignalDirection,
+  labels: string[],
+  votes: boolean[],
+  snapshot: TechEvaluation['snapshot'],
+  close: number,
+): TechEvaluation['votes'] {
+  const fmt = (v: number | null | boolean): string =>
+    typeof v === 'boolean' ? String(v) : v == null ? 'n/a' : v.toFixed(2);
+  const details: Record<string, string> = {
+    'price-vs-ema50': `close ${fmt(close)} vs EMA50 ${fmt(snapshot.ema50)}`,
+    'trend-stack': `EMA50 ${fmt(snapshot.ema50)} vs EMA200 ${fmt(snapshot.ema200)}`,
+    'rsi-band': `RSI14 ${fmt(snapshot.rsi14)} ${side === 'long' ? 'in [50,70]' : 'in [30,50]'}`,
+    'macd-align': `hist ${fmt(snapshot.macdHist)} ${side === 'long' ? '> 0' : '< 0'}`,
+    'htf-agree': `HTF close ${side === 'long' ? 'above' : 'below'} HTF EMA50: ${fmt(snapshot.htfTrendUp)}`,
+    volume: `relVol ${fmt(snapshot.relVol)} >= 1`,
+  };
+  return labels.map((name, i) => ({
+    name,
+    passed: votes[i] === true,
+    detail: details[name] ?? '',
+  }));
+}
+
+/**
+ * Convert a passing tech evaluation into a first-class Signal so the
+ * comparison strategy shares lifecycle, paper trading and analytics plumbing
+ * while staying separated by strategy='tech' everywhere. The ATR-derived risk
+ * plan is stated plainly in the explanation (not liquidity-derived like SMC).
+ */
+export function techSignalFromEvaluation(
+  coin: FullCoinId,
+  evaluation: TechEvaluation,
+  setupTimeframe: SmcSetup['setupTimeframe'],
+  setupIndex: number,
+  signalTime: number,
+  dataTime: number,
+  scannedAt: number,
+): Signal | null {
+  if (evaluation.direction === 'none' || evaluation.plan == null) return null;
+  const atr = evaluation.snapshot.atr ?? 0;
+  const plan = evaluation.plan;
+  const risk = Math.abs(plan.entry - plan.stopLoss);
+  if (!(risk > 0)) return null;
+  const zonePad = 0.25 * atr;
+  const setup: SmcSetup = {
+    coin,
+    contextTimeframe: '1h',
+    setupTimeframe,
+    entryTimeframe: '5m',
+    direction: evaluation.direction,
+    entry: plan.entry,
+    entryZoneTop: plan.entry + zonePad,
+    entryZoneBottom: plan.entry - zonePad,
+    stopLoss: plan.stopLoss,
+    takeProfit1: plan.takeProfit1,
+    takeProfit2: plan.takeProfit2,
+    riskReward1: Math.abs(plan.takeProfit1 - plan.entry) / risk,
+    riskReward2: Math.abs(plan.takeProfit2 - plan.entry) / risk,
+    setupIndex,
+    signalTime,
+    dataTime,
+    conditions: evaluation.votes.map((v) => ({ name: v.name, passed: v.passed, detail: v.detail })),
+    qualityPassed: evaluation.votes.filter((v) => v.passed).length,
+    qualityTotal: evaluation.votes.length,
+    explanation:
+      `Tech confluence ${evaluation.votes.filter((v) => v.passed).length}/${evaluation.votes.length} ` +
+      `(ATR-derived risk, not liquidity structure): entry ${plan.entry}, SL ${plan.stopLoss}, ` +
+      `TP1 ${plan.takeProfit1}, TP2 ${plan.takeProfit2}.`,
+    zoneSources: ['tech-confluence'],
+  };
+  return {
+    id: stableSignalId('tech', setup),
+    strategy: 'tech',
+    coin,
+    setupTimeframe: setup.setupTimeframe,
+    direction: evaluation.direction,
+    state: 'WAITING_FOR_RETEST',
+    setup,
+    noTradeReason: null,
+    note: null,
+    createdAt: scannedAt,
+    updatedAt: scannedAt,
+    entryFilledAt: null,
+    resolvedAt: null,
+    resolution: null,
   };
 }

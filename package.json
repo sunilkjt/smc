@@ -11,7 +11,8 @@
     "test": "vitest run",
     "smoke:discovery": "tsx scripts/smoke-discovery.ts",
     "scan": "tsx scripts/signal-scan.ts",
-    "alert": "tsx scripts/send-telegram.ts"
+    "alert": "tsx scripts/send-telegram.ts",
+    "verify:paper": "tsx scripts/verify-paper.ts"
   },
   "dependencies": {
     "lightweight-charts": "^5.2.1",

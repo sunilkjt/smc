@@ -71,14 +71,30 @@ they are never converted into empty market lists or empty signals.
    uses `VITE_BASE_PATH`, falling back to `/smc/`.
 4. Hash-based routing is used, so deep links work with no server rewrites.
 
-The `scan.yml` workflow re-runs the discovery smoke test every 30 minutes as a
-drift detector (full scheduled signal scanning arrives in Phase 7).
+The `scan.yml` workflow runs every 30 minutes: discovery smoke test, headless
+SMC scan of the top 5 stocks (artifact `scan-results.json`), paper-trade audit
+(`verify:paper`), and optional Telegram delivery.
 
-## Supabase (optional, Phase 7)
+## Supabase persistence (scheduled scans)
 
-Not configured. The UI runs fully locally and reports persistence as
-unavailable. When added: versioned `supabase/migrations/*`, RLS, publishable
-key only in the frontend.
+The browser app is local-only by design. Cross-run continuity for scheduled
+scans lives server-side:
+
+1. Create a free Supabase project. In the SQL editor, apply
+   `supabase/migrations/0001_smc_stocks.sql` then `0002_alerts.sql` in order.
+2. In the repo → Settings → Secrets and variables → Actions, add:
+   - `SUPABASE_URL` (e.g. `https://xyzcompany.supabase.co`)
+   - `SUPABASE_SERVICE_ROLE_KEY` (service-role — bypasses RLS, server-side only)
+   - Optionally `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` for alerts.
+3. The next scheduled run persists with `PERSIST=1`: it loads prior signals +
+   paper state, advances lifecycles over fresh candles, upserts everything
+   back, records a `smc_scans` row, and dedupes Telegram alerts via
+   `alerted_at`. Without the secrets the same workflow still runs statelessly.
+
+RLS posture: `anon` has no policies on these tables (publishable key alone can
+neither read nor write history). Only the service-role key syncs, and only
+from Actions/host env — never from the browser, never committed. Verify with
+`npm run verify:paper` (read-only audit; exits non-zero on inconsistency).
 
 ## Troubleshooting
 

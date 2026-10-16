@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { summarizeR, summarizeTrades, groupTrades } from './performance.ts';
 import type { ClosedTrade } from '../types.ts';
 import { emaSeries, rsiSeries, macdSeries, relativeVolume } from '../tech/indicators.ts';
-import { evaluateTech } from '../tech/strategy.ts';
+import { evaluateTech, techSignalFromEvaluation } from '../tech/strategy.ts';
 import type { Candle } from '../types.ts';
 
 function trade(r: number, coin = 'xyz:A', strategy: 'smc' | 'tech' = 'smc'): ClosedTrade {
@@ -154,5 +154,29 @@ describe('evaluateTech', () => {
     const out = evaluateTech({ coin: 'x', candles: few, htf: few });
     expect(out.direction).toBe('none');
     expect(out.reasons[0]).toContain('insufficient history');
+  });
+
+  it('converts passing evaluations into first-class tech signals', () => {
+    const up = trendCandles(220, 0.3, 900_000, 0.4);
+    const htf = trendCandles(70, 1.2, 3_600_000, 1);
+    const evaluation = evaluateTech({ coin: 'xyz:T', candles: up, htf });
+    expect(evaluation.direction).toBe('long');
+    const last = up[up.length - 1] as Candle;
+    const signal = techSignalFromEvaluation(
+      'xyz:T', evaluation, '15m', up.length - 1, last.closeTime, last.closeTime, 99,
+    );
+    expect(signal?.strategy).toBe('tech');
+    expect(signal?.state).toBe('WAITING_FOR_RETEST');
+    expect(signal?.id.startsWith('tech:xyz:T:15m:long:')).toBe(true);
+    expect(signal?.setup?.riskReward1).toBeCloseTo(2, 6);
+    expect(signal?.setup?.riskReward2).toBeCloseTo(3, 6);
+    expect(signal?.setup?.qualityPassed).toBe(signal?.setup?.qualityTotal);
+
+    const chop = chopCandles(220, 8, 5, 0, 900_000, 2);
+    const flatHtf = chopCandles(70, 6, 4, 1, 3_600_000, 3);
+    const none = evaluateTech({ coin: 'x', candles: chop, htf: flatHtf });
+    expect(
+      techSignalFromEvaluation('x', none, '15m', 219, 1, 1, 1),
+    ).toBeNull();
   });
 });

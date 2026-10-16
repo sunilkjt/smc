@@ -2,10 +2,14 @@ import { useEffect, useRef } from 'react';
 import {
   CandlestickSeries,
   createChart,
+  createSeriesMarkers,
   LineStyle,
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
+  type Time,
   type UTCTimestamp,
 } from 'lightweight-charts';
 import type { Candle } from '../lib/types.ts';
@@ -17,17 +21,27 @@ export interface ChartLine {
   dashed?: boolean;
 }
 
+export interface ChartMarker {
+  time: number;
+  position: 'aboveBar' | 'belowBar';
+  color: string;
+  shape: 'arrowUp' | 'arrowDown' | 'circle' | 'square';
+  text: string;
+}
+
 interface Props {
   candles: Candle[];
   height?: number;
   lines?: ChartLine[];
+  markers?: ChartMarker[];
 }
 
 /** Minimal dark candlestick chart. Closed candles only — pass provisional separately. */
-export default function CandleChart({ candles, height = 320, lines = [] }: Props) {
+export default function CandleChart({ candles, height = 320, lines = [], markers = [] }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const linesRef = useRef<IPriceLine[]>([]);
 
   useEffect(() => {
@@ -46,6 +60,7 @@ export default function CandleChart({ candles, height = 320, lines = [] }: Props
       wickDownColor: '#e5484d',
       borderVisible: false,
     });
+    markersRef.current = createSeriesMarkers(seriesRef.current, []);
     chartRef.current = chart;
     const resize = () => chart.applyOptions({ width: host.clientWidth });
     resize();
@@ -56,13 +71,15 @@ export default function CandleChart({ candles, height = 320, lines = [] }: Props
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      markersRef.current = null;
     };
   }, [height]);
 
   useEffect(() => {
     const chart = chartRef.current;
     const series = seriesRef.current;
-    if (!chart || !series) return;
+    const markersApi = markersRef.current;
+    if (!chart || !series || !markersApi) return;
     series.setData(
       candles.map((c) => ({
         time: Math.floor(c.time / 1000) as UTCTimestamp,
@@ -90,8 +107,18 @@ export default function CandleChart({ candles, height = 320, lines = [] }: Props
         title: l.title,
       }),
     );
+    const plotted: Array<SeriesMarker<UTCTimestamp>> = [...markers]
+      .sort((a, b) => a.time - b.time)
+      .map((m) => ({
+        time: Math.floor(m.time / 1000) as UTCTimestamp,
+        position: m.position,
+        color: m.color,
+        shape: m.shape,
+        text: m.text,
+      }));
+    markersApi.setMarkers(plotted);
     chart.timeScale().scrollToRealTime();
-  }, [candles, lines]);
+  }, [candles, lines, markers]);
 
   return <div ref={hostRef} className="w-full" style={{ height }} />;
 }

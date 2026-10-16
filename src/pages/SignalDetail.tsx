@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import CandleChart, { type ChartLine } from '../components/CandleChart.tsx';
 import { fetchCandles, INTERVAL_MS } from '../lib/hyperliquid/index.ts';
+import { buildSmcOverlays, type OverlaySelection } from '../lib/smc/overlays.ts';
 import { useScanner } from '../hooks/useScanner.tsx';
 import type { CandleInterval, CandleSet } from '../lib/types.ts';
 import { fmtPx, fmtTime } from '../lib/format.ts';
@@ -22,6 +23,7 @@ export default function SignalDetail() {
   const [data, setData] = useState<CandleSet | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [overlays, setOverlays] = useState<OverlaySelection>({ structure: true, sweeps: true, zones: true });
 
   const coinSignals = useMemo(
     () => signals.filter((s) => s.coin === coin),
@@ -67,15 +69,34 @@ export default function SignalDetail() {
   );
 
   const lines: ChartLine[] = useMemo(() => {
-    if (!active?.setup) return [];
-    const s = active.setup;
-    return [
-      { price: s.entry, color: '#d9a441', title: 'ENTRY' },
-      { price: s.stopLoss, color: '#e5484d', title: 'SL', dashed: true },
-      { price: s.takeProfit1, color: '#22c07a', title: 'TP1' },
-      { price: s.takeProfit2, color: '#22c07a', title: 'TP2', dashed: true },
-    ];
-  }, [active]);
+    const base: ChartLine[] = [];
+    if (active?.setup) {
+      const s = active.setup;
+      base.push(
+        { price: s.entry, color: '#d9a441', title: 'ENTRY' },
+        { price: s.stopLoss, color: '#e5484d', title: 'SL', dashed: true },
+        { price: s.takeProfit1, color: '#22c07a', title: 'TP1' },
+        { price: s.takeProfit2, color: '#22c07a', title: 'TP2', dashed: true },
+      );
+    }
+    if (data && overlays.zones) {
+      for (const z of buildSmcOverlays(data.closed, overlays).zones) {
+        base.push({ price: z.top, color: z.color, title: z.title, dashed: true });
+        base.push({ price: z.bottom, color: z.color, title: z.title, dashed: true });
+      }
+    }
+    return base;
+  }, [active, data, overlays]);
+
+  const markers = useMemo(
+    () => (data ? buildSmcOverlays(data.closed, overlays).markers : []),
+    [data, overlays],
+  );
+
+  const stale = useMemo(() => {
+    if (!lastClose) return false;
+    return Date.now() - lastClose.closeTime > 2 * INTERVAL_MS[timeframe];
+  }, [lastClose, timeframe]);
 
   if (!coin) {
     return (
@@ -126,7 +147,28 @@ export default function SignalDetail() {
                 equity perps). No signal can be computed from an empty series.
               </p>
             ) : (
-              <CandleChart candles={data.closed} lines={lines} />
+              <>
+                <div className="mb-2 flex flex-wrap items-center gap-3 text-[11px] text-mute">
+                  <span className="font-medium text-ink">Overlays:</span>
+                  {(['structure', 'sweeps', 'zones'] as const).map((key) => (
+                    <label key={key} className="flex cursor-pointer items-center gap-1 hover:text-ink">
+                      <input
+                        type="checkbox"
+                        checked={overlays[key]}
+                        onChange={() => setOverlays((o) => ({ ...o, [key]: !o[key] }))}
+                        className="accent-[#22c07a]"
+                      />
+                      {key === 'structure' ? 'BOS/CHoCH' : key === 'sweeps' ? 'Sweeps' : 'FVG/OB zones'}
+                    </label>
+                  ))}
+                  {stale && (
+                    <span className="ml-auto rounded bg-gold/15 px-1.5 py-0.5 text-gold">
+                      Stale: last confirmed candle is old — no new signals until fresh data arrives.
+                    </span>
+                  )}
+                </div>
+                <CandleChart candles={data.closed} lines={lines} markers={markers} />
+              </>
             )}
             <div className="mono mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-mute">
               <span>confirmed closed: {data.closed.length}</span>

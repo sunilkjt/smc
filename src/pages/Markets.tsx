@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDiscovery } from '../hooks/useDiscovery.tsx';
-import { dayChangePct, fmtCompact, fmtPct, fmtPx } from '../lib/format.ts';
+import { dayChangePct, fmtCompact, fmtPct, fmtPx, timeAgo } from '../lib/format.ts';
 
 export default function Markets() {
   const { status, result, error, refresh } = useDiscovery();
@@ -21,7 +21,7 @@ export default function Markets() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-lg font-semibold">Stock Markets</h1>
         <span className="mono text-xs text-mute">
-          {result ? `${markets.length} verified · ${result.excludedCount} excluded` : status}
+          {result ? `${markets.length} verified · ${result.excludedCount} excluded · data ${timeAgo(result.fetchedAt)}` : status}
         </span>
         <input
           value={query}
