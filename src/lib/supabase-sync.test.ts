@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  getMeta,
+  latestScan,
   loadAccount,
   loadSignals,
   loadTrades,
@@ -9,6 +11,7 @@ import {
   rowToPosition,
   rowToSignal,
   saveAccount,
+  setMeta,
   signalToRow,
   upsertSignals,
   upsertTrades,
@@ -179,5 +182,32 @@ describe('sync IO (mocked fetch)', () => {
     expect(() =>
       validateSbConfig({ url: 'https://abc.supabase.co', key: 'k' }),
     ).not.toThrow();
+  });
+
+  it('reads/writes meta values (null when absent)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(okJson([{ value: '42' }]))
+      .mockResolvedValueOnce(okJson([]))
+      .mockImplementation(() => Promise.resolve(okJson([])));
+    expect(await getMeta(CFG, 'tg_offset', fetchMock)).toBe('42');
+    const getUrl = fetchMock.mock.calls[0]?.[0] as string;
+    expect(getUrl).toContain('/rest/v1/smc_meta');
+    await setMeta(CFG, 'tg_offset', '43', fetchMock);
+    const [setUrl, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(setUrl).toContain('on_conflict=key');
+    expect(init.method).toBe('POST');
+  });
+
+  it('returns the latest scan row or null', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okJson([{ ran_at: new Date(1000).toISOString(), verified_stocks: 129, signals_new: 2, error: null }]),
+      )
+      .mockResolvedValueOnce(okJson([]));
+    const latest = await latestScan(CFG, fetchMock);
+    expect(latest).toMatchObject({ verifiedStocks: 129, signalsNew: 2, error: null });
+    expect(await latestScan(CFG, fetchMock)).toBeNull();
   });
 });

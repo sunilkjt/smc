@@ -81,7 +81,8 @@ The browser app is local-only by design. Cross-run continuity for scheduled
 scans lives server-side:
 
 1. Create a free Supabase project. In the SQL editor, apply
-   `supabase/migrations/0001_smc_stocks.sql` then `0002_alerts.sql` in order.
+   `supabase/migrations/0001_smc_stocks.sql`, `0002_alerts.sql`, then
+   `0003_meta.sql` in order.
 2. In the repo → Settings → Secrets and variables → Actions, add:
    - `SUPABASE_URL` (e.g. `https://xyzcompany.supabase.co`)
    - `SUPABASE_SERVICE_ROLE_KEY` (service-role — bypasses RLS, server-side only)
@@ -97,6 +98,20 @@ RLS posture: `anon` has no policies on these tables (publishable key alone can
 neither read nor write history). Only the service-role key syncs, and only
 from Actions/host env — never from the browser, never committed. Verify with
 `npm run verify:paper` (read-only audit; exits non-zero on inconsistency).
+
+## Telegram: alerts + commands
+
+Alerts are one-way by default (fresh setups only, each sent once). The bot is
+also two-way via the `telegram.yml` workflow (polls every ~5 min, owner-only —
+strangers are silently ignored):
+
+- `/scan [N]` — run a fresh scan now (3–10 markets) and reply with the setups
+- `/status` — last scheduled scan summary
+- `/positions` — open paper positions
+- `/signals` — latest actionable signals
+- `/help` — command list
+
+No extra setup beyond the `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` secrets.
 
 ## Troubleshooting
 

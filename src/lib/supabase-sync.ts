@@ -492,3 +492,60 @@ export async function loadAlertCandidates(
   }
   return out;
 }
+
+/** Read a metadata value (e.g. Telegram poll offset). Null when absent. */
+export async function getMeta(
+  cfg: SbConfig,
+  key: string,
+  fetchFn: FetchFn = http,
+): Promise<string | null> {
+  const res = await fetchFn(
+    `${base(cfg)}/rest/v1/smc_meta?key=eq.${encodeURIComponent(key)}&select=value`,
+    { headers: headers(cfg) },
+  );
+  const rows = await readJson<Array<{ value?: unknown }>>(res, 'load meta');
+  const value = rows[0]?.value;
+  return typeof value === 'string' ? value : null;
+}
+
+/** Write a metadata value (upsert by key). */
+export async function setMeta(
+  cfg: SbConfig,
+  key: string,
+  value: string,
+  fetchFn: FetchFn = http,
+): Promise<void> {
+  const res = await fetchFn(`${base(cfg)}/rest/v1/smc_meta?on_conflict=key`, {
+    method: 'POST',
+    headers: headers(cfg, { Prefer: 'resolution=merge-duplicates' }),
+    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
+  });
+  await checkWrite(res, 'save meta');
+}
+
+/** Latest recorded scan row (for /status replies). Null when none yet. */
+export async function latestScan(
+  cfg: SbConfig,
+  fetchFn: FetchFn = http,
+): Promise<{
+  ranAt: string;
+  verifiedStocks: number;
+  signalsNew: number;
+  error: string | null;
+} | null> {
+  const res = await fetchFn(
+    `${base(cfg)}/rest/v1/smc_scans?select=ran_at,verified_stocks,signals_new,error&order=ran_at.desc&limit=1`,
+    { headers: headers(cfg) },
+  );
+  const rows = await readJson<unknown[]>(res, 'load latest scan');
+  const row = rows[0];
+  if (!isRecord(row) || typeof row['ran_at'] !== 'string') return null;
+  const verified = typeof row['verified_stocks'] === 'number' ? row['verified_stocks'] : 0;
+  const fresh = typeof row['signals_new'] === 'number' ? row['signals_new'] : 0;
+  return {
+    ranAt: row['ran_at'] as string,
+    verifiedStocks: verified,
+    signalsNew: fresh,
+    error: typeof row['error'] === 'string' ? (row['error'] as string) : null,
+  };
+}
