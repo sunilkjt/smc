@@ -1,0 +1,25 @@
+name: Scheduled market scan
+
+# Server-side drift detector: re-runs live discovery on a schedule so API
+# changes or classification drift surface in Actions logs. The full scheduled
+# signal scan + optional Telegram alerts arrive in Phase 7; until then this
+# workflow runs the discovery smoke test only. No secrets are used.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run smoke:discovery

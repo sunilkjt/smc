@@ -1,0 +1,30 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-board: #0b0e13;
+  --color-panel: #12161d;
+  --color-edge: #1f2630;
+  --color-ink: #e8edf3;
+  --color-mute: #8b94a3;
+  --color-bull: #22c07a;
+  --color-bear: #e5484d;
+  --color-gold: #d9a441;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-board);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+.mono {
+  font-family: ui-monospace, Consolas, monospace;
+}
